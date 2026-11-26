@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import Navbar from "@/components/Navbar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pipeline Triage",
-  description: "Automated CI/CD Build Failure Diagnosis & Triage",
+  title: "Pipeline Triage - Automated CI/CD Failure Triage",
+  description: "Diagnose, route, and resolve CI/CD build failures automatically.",
 };
 
 export default function RootLayout({
@@ -13,8 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen bg-slate-900 text-slate-100">
-        {children}
+      <body className="antialiased min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+        <Navbar />
+        <main className="flex-1">{children}</main>
       </body>
     </html>
   );

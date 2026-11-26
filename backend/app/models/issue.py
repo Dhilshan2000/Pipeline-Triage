@@ -49,5 +49,4 @@ class Issue(BaseModel):
     comments: List[Comment] = Field(default_factory=list)
     status_history: List[StatusHistoryEntry] = Field(default_factory=list)
 
-    class Config:
-        populate_by_name = True
+    model_config = {"populate_by_name": True}

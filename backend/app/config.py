@@ -14,11 +14,9 @@ class Settings(BaseSettings):
     QDRANT_URL: str = "http://qdrant:6333"
     QDRANT_API_KEY: Optional[str] = None
 
-    # LLM Settings
-    LLM_PROVIDER: str = "gemini"
-    LLM_MODEL: str = "gemini-2.5-flash"
-    GEMINI_API_KEY: Optional[str] = None
-    OPENAI_API_KEY: Optional[str] = None
+    # Claude LLM Settings (Locked exclusively to Claude / Anthropic)
+    LLM_PROVIDER: str = "anthropic"
+    LLM_MODEL: str = "claude-3-5-sonnet-20241022"
     ANTHROPIC_API_KEY: Optional[str] = None
     LLM_TIMEOUT_SECONDS: int = 45
 
@@ -44,13 +42,11 @@ class Settings(BaseSettings):
     GITLAB_WEBHOOK_SECRET: Optional[str] = "gitlab_shared_webhook_secret_123"
     GITHUB_WEBHOOK_SECRET: Optional[str] = "github_shared_webhook_secret_456"
 
-    # Kanvaro MCP
+    # Kanvaro Mock MCP Server
     KANVARO_MCP_URL: str = "http://mock-kanvaro:8080/sse"
     KANVARO_BOT_USER: str = "triage-bot"
     KANVARO_BOT_PASSWORD: str = "mock_kanvaro_secure_pass"
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 settings = Settings()
