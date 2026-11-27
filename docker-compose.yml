@@ -7,7 +7,7 @@ services:
     container_name: pipeline_triage_mongo
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "27018:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example_password
@@ -47,8 +47,8 @@ services:
   # ---------------------------------------------------------------------------
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: pipeline_triage_backend
     restart: unless-stopped
     ports:
@@ -61,6 +61,8 @@ services:
       - QDRANT_URL=http://qdrant:6333
       - SMTP_HOST=mailpit
       - SMTP_PORT=1025
+      - SONARQUBE_URL=http://host.docker.internal:9000
+      - KANVARO_MCP_URL=http://mock-kanvaro:8080/sse
     depends_on:
       - mongo
       - redis
@@ -71,8 +73,8 @@ services:
 
   worker:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.worker
+      context: .
+      dockerfile: backend/Dockerfile.worker
     container_name: pipeline_triage_worker
     restart: unless-stopped
     env_file:
@@ -83,6 +85,8 @@ services:
       - QDRANT_URL=http://qdrant:6333
       - SMTP_HOST=mailpit
       - SMTP_PORT=1025
+      - SONARQUBE_URL=http://host.docker.internal:9000
+      - KANVARO_MCP_URL=http://mock-kanvaro:8080/sse
     depends_on:
       - backend
       - mongo

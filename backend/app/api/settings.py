@@ -50,10 +50,41 @@ async def save_adapter_settings(req: AdapterSettingsUpdate):
 @router.get("/connectors")
 async def list_connectors():
     db = get_async_db()
-    connectors = await db.connector_settings.find({}).to_list(length=10)
+    connectors = await db.connector_settings.find({}).to_list(length=20)
     for c in connectors:
         c["id"] = str(c.pop("_id"))
+        if "encrypted_credentials" in c:
+            c["has_credentials"] = True
+            c.pop("encrypted_credentials", None)
     return {"connectors": connectors}
+
+@router.post("/connectors")
+async def save_connector_settings(req: ConnectorSettingsUpdate):
+    db = get_async_db()
+    encrypted_creds = {}
+    clean_config = {}
+    for k, v in req.config.items():
+        if any(s in k.lower() for s in ("token", "secret", "password", "webhook_url")):
+            encrypted_creds[k] = encrypt_credential(str(v))
+            clean_config[k] = "••••••••" if v else ""
+        else:
+            clean_config[k] = v
+
+    doc = {
+        "type": req.type,
+        "name": req.name.lower().strip(),
+        "enabled": req.enabled,
+        "config": clean_config,
+        "encrypted_credentials": encrypted_creds
+    }
+    await db.connector_settings.update_one({"name": doc["name"]}, {"$set": doc}, upsert=True)
+    return {"status": "saved", "name": doc["name"]}
+
+@router.delete("/connectors/{name}")
+async def delete_connector_settings(name: str):
+    db = get_async_db()
+    await db.connector_settings.delete_one({"name": name.lower().strip()})
+    return {"status": "deleted", "name": name}
 
 @router.get("/users")
 async def list_users():

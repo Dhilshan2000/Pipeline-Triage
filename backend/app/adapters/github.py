@@ -139,6 +139,21 @@ class GitHubAdapter:
 
         # Fetch logs if needed or extract from payload
         raw_log = payload.get("log") or ""
+        token = creds.get("access_token")
+        api_url = creds.get("api_url", "https://api.github.com")
+
+        if not raw_log and token and ref.job_id != "workflow_run" and ref.job_id.isdigit():
+            try:
+                with httpx.Client(timeout=10.0, follow_redirects=True) as client:
+                    resp = client.get(
+                        f"{api_url}/repos/{ref.project}/actions/jobs/{ref.job_id}/logs",
+                        headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+                    )
+                    if resp.status_code == 200:
+                        raw_log = resp.text
+            except Exception as e:
+                logger.warning(f"Failed to fetch GitHub job log via API: {e}")
+
         sanitized_log = mask_secrets(trim_log(raw_log))
 
         return FailureEvent(

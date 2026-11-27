@@ -48,6 +48,9 @@ out/
 mongo_data/
 redis_data/
 qdrant_data/
+cloudflared.exe
+*.tsbuildinfo
+sandbox_repo/
 
 # IDE & OS
 .idea/

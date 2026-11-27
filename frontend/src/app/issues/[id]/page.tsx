@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { downloadIssuePdfReport } from "@/lib/pdfReport";
 
 export default function IssueDetailPage() {
   const params = useParams();
@@ -73,6 +74,48 @@ export default function IssueDetailPage() {
     }
   };
 
+  const downloadReport = () => {
+    if (!issue) return;
+    const rep = issue.report || {};
+    const steps = (rep.fix_steps || [])
+      .map((s: any, idx: number) => `${s.step_number || idx + 1}. ${s.instruction}${s.code_snippet ? `\n\`\`\`\n${s.code_snippet}\n\`\`\`` : ""}`)
+      .join("\n\n");
+    const md = `# Pipeline Triage Report: ${issue.title || issueId}
+
+- **Issue ID:** ${issue.id || issueId}
+- **Project:** ${issue.project || "N/A"} (${issue.platform || "N/A"})
+- **Category:** ${issue.category || "N/A"} (${Math.round((issue.confidence || 0.95) * 100)}% via ${issue.classifier_source || "rules"})
+- **Status:** ${issue.status || "Open"}
+- **Assignee:** ${issue.assignee || "Unassigned"}
+- **Kanvaro Task:** ${issue.kanvaro_task_id || "N/A"}
+- **Effort Estimate:** ${rep.effort_estimate || "N/A"}
+
+## Summary
+${rep.summary || "N/A"}
+
+## Root Cause
+${rep.root_cause || "N/A"}
+
+## Step-by-Step Fix
+${steps || "No fix steps provided."}
+
+## Sources
+${(rep.sources || []).map((s: string) => `- ${s}`).join("\n") || "- N/A"}
+
+## Masked Log Excerpt
+\`\`\`
+${issue.log_excerpt || "No log excerpt available."}
+\`\`\`
+`;
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `triage-report-${issue.id || issueId}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return <div className="p-12 text-center text-slate-400">Loading issue details...</div>;
   }
@@ -116,7 +159,13 @@ export default function IssueDetailPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => downloadIssuePdfReport(issue)}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition shadow-sm"
+          >
+            Download Report (.pdf)
+          </button>
           <button
             onClick={() => updateStatus("In progress")}
             className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition"

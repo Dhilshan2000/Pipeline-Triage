@@ -136,3 +136,55 @@ async def github_webhook(request: Request):
             process_failure_job(job_payload)
 
         return {"status": "enqueued", "event_key": parsed.event_key}
+
+@router.post("/bitbucket")
+async def bitbucket_webhook(request: Request):
+    """Ingests Bitbucket Pipelines webhooks through the pluggable BitbucketAdapter."""
+    body = await request.body()
+    headers = dict(request.headers)
+    adapter = adapter_registry.get("bitbucket")
+    if not adapter:
+        raise HTTPException(status_code=404, detail="Bitbucket adapter not registered")
+
+    if not adapter.verify(headers, body, getattr(settings, "BITBUCKET_WEBHOOK_SECRET", None)):
+        raise HTTPException(status_code=401, detail="Invalid Bitbucket webhook signature")
+
+    parsed = adapter.parse(headers, body)
+    if not parsed:
+        return {"status": "ignored"}
+
+    db = get_async_db()
+    if isinstance(parsed, RunStat):
+        await db.run_stats.insert_one(parsed.model_dump())
+        return {"status": "counted"}
+
+    if isinstance(parsed, FailureRef):
+        existing = await db.deliveries.find_one({"event_key": parsed.event_key})
+        if existing:
+            return {"status": "duplicate_delivery_ignored", "event_key": parsed.event_key}
+
+        await db.deliveries.insert_one({
+            "event_key": parsed.event_key,
+            "platform": parsed.platform,
+            "project": parsed.project,
+            "pipeline_id": parsed.pipeline_id,
+            "job_id": parsed.job_id,
+        })
+
+        q = get_redis_queue()
+        job_payload = {
+            "platform": parsed.platform,
+            "event_key": parsed.event_key,
+            "project": parsed.project,
+            "pipeline_id": parsed.pipeline_id,
+            "job_id": parsed.job_id,
+            "raw_payload": parsed.raw_payload,
+        }
+        if q:
+            from app.worker import process_failure_job
+            q.enqueue(process_failure_job, job_payload)
+        else:
+            from app.worker import process_failure_job
+            process_failure_job(job_payload)
+
+        return {"status": "enqueued", "event_key": parsed.event_key}

@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     # Claude LLM Settings (Locked exclusively to Claude / Anthropic)
     LLM_PROVIDER: str = "anthropic"
-    LLM_MODEL: str = "claude-3-5-sonnet-20241022"
+    LLM_MODEL: str = "claude-sonnet-5"
     ANTHROPIC_API_KEY: Optional[str] = None
     LLM_TIMEOUT_SECONDS: int = 45
 
@@ -41,11 +41,17 @@ class Settings(BaseSettings):
     SONARQUBE_TRIAGE_BOT_TOKEN: Optional[str] = None
     GITLAB_WEBHOOK_SECRET: Optional[str] = "gitlab_shared_webhook_secret_123"
     GITHUB_WEBHOOK_SECRET: Optional[str] = "github_shared_webhook_secret_456"
+    GITLAB_API_TOKEN: Optional[str] = None
+    GITHUB_API_TOKEN: Optional[str] = None
 
     # Kanvaro Mock MCP Server
     KANVARO_MCP_URL: str = "http://mock-kanvaro:8080/sse"
     KANVARO_BOT_USER: str = "triage-bot"
     KANVARO_BOT_PASSWORD: str = "mock_kanvaro_secure_pass"
+
+    # Web App URLs
+    NEXT_PUBLIC_API_URL: str = "http://localhost:8000"
+    NEXTAUTH_URL: str = "http://localhost:3000"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

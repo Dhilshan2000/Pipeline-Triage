@@ -26,7 +26,7 @@ def run_evaluation():
     total = len(test_cases)
     logger.info(f"Loaded {total} labeled failure test cases across GitLab and GitHub.")
 
-    modes = ["rules_only", "hybrid"]
+    modes = ["rules_only", "llm_only", "hybrid"]
     results = {}
 
     for mode in modes:

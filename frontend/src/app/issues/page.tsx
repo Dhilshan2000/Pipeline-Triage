@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { downloadIssuePdfReport } from "@/lib/pdfReport";
 
 interface IssueItem {
   id: string;
@@ -155,13 +156,12 @@ export default function IssuesPage() {
           </div>
         ) : (
           filtered.map((issue) => (
-            <Link
+            <div
               key={issue.id}
-              href={`/issues/${issue.id}`}
-              className="block bg-slate-900/70 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 transition shadow-sm"
+              className="bg-slate-900/70 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 transition shadow-sm"
             >
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
+                <Link href={`/issues/${issue.id}`} className="flex-1 block">
                   <div className="flex items-center gap-2 mb-2">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getCategoryColor(issue.category)}`}>
                       {issue.category}
@@ -177,8 +177,8 @@ export default function IssuesPage() {
                   {issue.report?.summary && (
                     <p className="text-sm text-slate-300 line-clamp-1">{issue.report.summary}</p>
                   )}
-                </div>
-                <div className="text-right shrink-0">
+                </Link>
+                <div className="text-right shrink-0 flex flex-col items-end gap-2">
                   <span className={`inline-block px-2.5 py-1 rounded text-xs font-semibold ${
                     issue.status === "Resolved" ? "bg-emerald-500/20 text-emerald-400" :
                     issue.status === "In progress" ? "bg-blue-500/20 text-blue-400" :
@@ -186,10 +186,21 @@ export default function IssuesPage() {
                   }`}>
                     {issue.status}
                   </span>
-                  <p className="text-xs text-slate-400 mt-2">Owner: {issue.assignee}</p>
+                  <p className="text-xs text-slate-400">Owner: {issue.assignee}</p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      downloadIssuePdfReport(issue);
+                    }}
+                    className="px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition"
+                  >
+                    Download PDF
+                  </button>
                 </div>
               </div>
-            </Link>
+            </div>
           ))
         )}
       </div>

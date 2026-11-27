@@ -2,6 +2,7 @@ from typing import Dict, Optional
 from app.adapters.base import CIAdapter
 from app.adapters.gitlab import GitLabAdapter
 from app.adapters.github import GitHubAdapter
+from app.adapters.bitbucket import BitbucketAdapter
 
 class AdapterRegistry:
     """Registry managing available CI input adapters."""
@@ -9,6 +10,7 @@ class AdapterRegistry:
         self._adapters: Dict[str, CIAdapter] = {
             "gitlab": GitLabAdapter(),
             "github": GitHubAdapter(),
+            "bitbucket": BitbucketAdapter(),
         }
 
     def register(self, adapter: CIAdapter):
@@ -24,6 +26,8 @@ class AdapterRegistry:
             return "gitlab"
         if "x-github-event" in norm_headers or "x-hub-signature-256" in norm_headers:
             return "github"
+        if "x-hook-uuid" in norm_headers or "x-event-key" in norm_headers:
+            return "bitbucket"
         return None
 
 adapter_registry = AdapterRegistry()

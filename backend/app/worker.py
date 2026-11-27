@@ -16,6 +16,7 @@ from app.report.generator import generate_triage_report
 from app.connectors.kanvaro_mcp import KanvaroMCPConnector
 from app.connectors.outbox import enqueue_outbox_notification, process_outbox_queue
 from app.rag.knowledge_base import knowledge_base
+from app.security.crypto import decrypt_credential
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +54,29 @@ def process_failure_job(delivery_data: Dict[str, Any]) -> Dict[str, Any]:
         raw_payload=delivery_data.get("raw_payload", {})
     )
 
+    # Fetch credentials for adapter
+    creds = {}
+    try:
+        adapter_doc = db.adapter_settings.find_one({"key": platform})
+        if adapter_doc:
+            creds = dict(adapter_doc.get("config", {}))
+            for k, enc_v in adapter_doc.get("encrypted_credentials", {}).items():
+                if enc_v:
+                    try:
+                        creds[k] = decrypt_credential(enc_v)
+                    except Exception:
+                        creds[k] = enc_v
+    except Exception as e:
+        logger.warning(f"Failed to load adapter settings for {platform}: {e}")
+
+    # Fallback to settings if not found in db
+    if platform == "gitlab" and not creds.get("access_token"):
+        creds["access_token"] = getattr(settings, "GITLAB_API_TOKEN", None)
+    elif platform == "github" and not creds.get("access_token"):
+        creds["access_token"] = getattr(settings, "GITHUB_API_TOKEN", None)
+
     # Collect facts (includes Step 3: log trimming and secret masking)
-    event: FailureEvent = adapter.collect(ref, creds={})
+    event: FailureEvent = adapter.collect(ref, creds=creds)
 
     # Step 4: SonarQube query
     sonar_data = None
@@ -144,6 +166,27 @@ def process_failure_job(delivery_data: Dict[str, Any]) -> Dict[str, Any]:
                 }
             }
         )
+
+        # 9c. Enqueue any enabled REST connectors configured in Settings (e.g. Slack, Jira)
+        for conn in db.connector_settings.find({"enabled": True, "type": "rest"}):
+            conn_cfg = dict(conn.get("config", {}))
+            for k, enc_v in conn.get("encrypted_credentials", {}).items():
+                if enc_v:
+                    try:
+                        conn_cfg[k] = decrypt_credential(enc_v)
+                    except Exception:
+                        conn_cfg[k] = enc_v
+            enqueue_outbox_notification(
+                db=db,
+                issue_id=issue_id,
+                connector_type="slack",
+                payload={
+                    "recipient": assignee_email,
+                    "summary": notification_summary,
+                    "link": issue_link,
+                    "config": conn_cfg
+                }
+            )
 
         # Trigger immediate outbox send
         try:

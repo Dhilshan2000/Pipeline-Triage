@@ -1,10 +1,42 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+
+interface AuthUser {
+  name: string;
+  email: string;
+  role: string;
+}
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  const loadUser = () => {
+    try {
+      const raw = localStorage.getItem("pt_user");
+      setUser(raw ? JSON.parse(raw) : null);
+    } catch {
+      setUser(null);
+    }
+  };
+
+  useEffect(() => {
+    loadUser();
+    window.addEventListener("pt-auth-change", loadUser);
+    return () => window.removeEventListener("pt-auth-change", loadUser);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("pt_token");
+    localStorage.removeItem("pt_user");
+    setUser(null);
+    window.dispatchEvent(new Event("pt-auth-change"));
+    router.push("/login");
+  };
 
   const links = [
     { href: "/issues", label: "Issues" },
@@ -41,11 +73,29 @@ export default function Navbar() {
             })}
           </nav>
         </div>
+
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            DevOps Lead
-          </span>
-          <span className="text-sm text-slate-300">dhilshan@example.com</span>
+          {user ? (
+            <>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 capitalize">
+                {user.role}
+              </span>
+              <span className="text-sm text-slate-300 hidden sm:inline">{user.email}</span>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="px-3.5 py-1.5 rounded-md text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition"
+            >
+              Sign in
+            </Link>
+          )}
         </div>
       </div>
     </header>
